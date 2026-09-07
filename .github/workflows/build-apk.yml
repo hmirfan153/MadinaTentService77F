@@ -20,19 +20,23 @@ jobs:
       - name: Find V8 ZIP
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
-          echo "ZIP found: $ZIP_FILE"
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No ZIP file found"
-            exit 1
-          fi
+          echo "ZIP: $ZIP_FILE"
           mkdir -p source
           unzip -q "$ZIP_FILE" -d source
+
+      - name: Fix Java and Kotlin JVM Target
+        run: |
+          echo "Fixing Android project settings..."
+          find source -name "build.gradle.kts" -type f -print0 | while IFS= read -r -d '' FILE; do
+            sed -i 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' "$FILE"
+            sed -i 's/jvmTarget = "1.8"/jvmTarget = "17"/g' "$FILE"
+          done
 
       - name: Find Android Project
         run: |
           ROOT=$(find source -name settings.gradle.kts -print -quit | xargs dirname)
           echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
-          echo "Project found at: $ROOT"
+          echo "Project: $ROOT"
 
       - name: Build APK
         run: |
