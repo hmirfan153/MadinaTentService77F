@@ -22,7 +22,7 @@ jobs:
         run: |
           set -e
 
-          ZIP="./MadinaTentService77F_V8_1_Clean_Build.zip"
+          ZIP="./MadinaTentService77F_V8_2_Clean_Build.zip"
 
           if [ ! -f "$ZIP" ]; then
             echo "ERROR: V8.1 Clean ZIP not found."
