@@ -1,1 +1,42 @@
+name: Build Madina Tent Service APK
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get project
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Find and extract V8 ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "V8 ZIP not found"
+            exit 1
+          fi
+          mkdir -p source
+          unzip -q "$ZIP_FILE" -d source
+
+      - name: Build APK
+        run: |
+          ROOT=$(find source -name gradlew -type f -print -quit | xargs dirname)
+          echo "Project folder: $ROOT"
+          cd "$ROOT"
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MadinaTentService77F-debug-apk
+          path: source/**/app/build/outputs/apk/debug/*.apk
