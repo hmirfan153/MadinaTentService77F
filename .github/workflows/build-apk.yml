@@ -17,35 +17,50 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Find V8 ZIP
+      - name: Extract V8.1 Clean ZIP
+        shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
-          echo "ZIP: $ZIP_FILE"
-          mkdir -p source
-          unzip -q "$ZIP_FILE" -d source
+          set -e
 
-      - name: Fix Java and Kotlin JVM Target
-        run: |
-          echo "Fixing Android project settings..."
-          find source -name "build.gradle.kts" -type f -print0 | while IFS= read -r -d '' FILE; do
-            sed -i 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' "$FILE"
-            sed -i 's/jvmTarget = "1.8"/jvmTarget = "17"/g' "$FILE"
-          done
+          ZIP="./MadinaTentService77F_V8_1_Clean_Build.zip"
 
-      - name: Find Android Project
-        run: |
-          ROOT=$(find source -name settings.gradle.kts -print -quit | xargs dirname)
-          echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
-          echo "Project: $ROOT"
+          if [ ! -f "$ZIP" ]; then
+            echo "ERROR: V8.1 Clean ZIP not found."
+            echo "Files in repository:"
+            ls -lah
+            exit 1
+          fi
 
-      - name: Build APK
-        run: |
-          cd "$PROJECT_ROOT"
-          chmod +x gradlew
+          rm -rf project
+          mkdir -p project
+
+          unzip -q "$ZIP" -d project
+
+          ROOT="$(find project -type f -name settings.gradle.kts -print -quit | xargs -r dirname)"
+
+          if [ -z "$ROOT" ]; then
+            echo "ERROR: settings.gradle.kts not found after extraction."
+            find project -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+          echo "Project root: $ROOT"
+
+          test -d "$ROOT/app"
+          test -f "$ROOT/app/build.gradle.kts"
+          test -f "$ROOT/gradlew"
+
+          chmod +x "$ROOT/gradlew"
+
+          echo "Starting Android build..."
+
+          cd "$ROOT"
+
           ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MadinaTentService77F-debug-apk
-          path: "${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/*.apk"
+          path: project/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
